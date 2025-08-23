@@ -12,8 +12,43 @@ app.get('/', (req, res) => {
       health: '/health',
       mcp_info: '/mcp',
       tools: '/mcp/tools/list',
-      call: '/mcp/tools/call'
+      call: '/mcp/tools/call',
+      oauth_discovery: '/.well-known/oauth-authorization-server'
     }
+  });
+});
+
+// OAuth Authorization Server Discovery (requis par Claude)
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  
+  res.json({
+    issuer: `https://${process.env.AUTH0_DOMAIN}`,
+    authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/authorize`,
+    token_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+    device_authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/device/code`,
+    userinfo_endpoint: `https://${process.env.AUTH0_DOMAIN}/userinfo`,
+    jwks_uri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`,
+    scopes_supported: ["openid", "profile", "email"],
+    response_types_supported: ["code"],
+    response_modes_supported: ["query"],
+    grant_types_supported: [
+      "authorization_code",
+      "urn:ietf:params:oauth:grant-type:device_code"
+    ],
+    code_challenge_methods_supported: ["S256"]
+  });
+});
+
+// OAuth Protected Resource Discovery
+app.get('/.well-known/oauth-protected-resource', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  
+  res.json({
+    resource: baseUrl,
+    authorization_servers: [`https://${process.env.AUTH0_DOMAIN}`],
+    scopes_supported: ["openid", "profile", "email"],
+    bearer_methods_supported: ["header"]
   });
 });
 
