@@ -95,6 +95,78 @@ app.post('/', (req, res) => {
         }
       }
     });
+  } else if (method === 'notifications/initialized') {
+    // Notification sans réponse
+    res.status(200).end();
+  } else if (method === 'tools/list') {
+    // Liste des outils disponibles
+    res.json({
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        tools: [
+          {
+            name: "ping",
+            description: "Simple ping tool that responds with pong",
+            inputSchema: {
+              type: "object",
+              properties: {},
+              required: []
+            }
+          },
+          {
+            name: "echo",
+            description: "Echo back your message",
+            inputSchema: {
+              type: "object", 
+              properties: {
+                message: {
+                  type: "string",
+                  description: "Message to echo back"
+                }
+              },
+              required: ["message"]
+            }
+          }
+        ]
+      }
+    });
+  } else if (method === 'tools/call') {
+    // Exécution d'un outil
+    const { name, arguments: args } = req.body.params;
+    
+    if (name === 'ping') {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{
+            type: "text", 
+            text: "🏓 pong! Your MCP server is working perfectly!"
+          }]
+        }
+      });
+    } else if (name === 'echo' && args?.message) {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{
+            type: "text",
+            text: `Echo: ${args.message}`
+          }]
+        }
+      });
+    } else {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        error: {
+          code: -32602,
+          message: "Invalid params"
+        }
+      });
+    }
   } else {
     // Méthode non supportée
     res.json({
