@@ -80,12 +80,12 @@ app.post('/', (req, res) => {
   const { method, id } = req.body;
   
   if (method === 'initialize') {
-    // Réponse JSON-RPC pour initialize avec tools déclarés
+    // Réponse JSON-RPC pour initialize - SPEC 2025-03-26
     res.json({
       jsonrpc: "2.0",
       id: id,
       result: {
-        protocolVersion: "2025-06-18",
+        protocolVersion: "2025-03-26",
         capabilities: {
           tools: {
             listChanged: true
@@ -94,33 +94,7 @@ app.post('/', (req, res) => {
         serverInfo: {
           name: 'Simple MCP Server',
           version: '1.0.0'
-        },
-        // Déclarer les outils directement dans initialize
-        tools: [
-          {
-            name: "ping",
-            description: "Simple ping tool that responds with pong",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              required: []
-            }
-          },
-          {
-            name: "echo", 
-            description: "Echo back your message",
-            inputSchema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  description: "Message to echo back"
-                }
-              },
-              required: ["message"]
-            }
-          }
-        ]
+        }
       }
     });
   } else if (method === 'notifications/initialized') {
@@ -128,6 +102,7 @@ app.post('/', (req, res) => {
     res.status(200).end();
   } else if (method === 'tools/list') {
     // Liste des outils disponibles
+    console.log('🔧 Claude demande tools/list !');
     res.json({
       jsonrpc: "2.0",
       id: id,
