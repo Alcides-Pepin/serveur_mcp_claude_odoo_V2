@@ -1,8 +1,55 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// JWKS client for Auth0
+const client = jwksClient({
+  jwksUri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`
+});
+
+function getKey(header, callback) {
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) {
+      return callback(err);
+    }
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
+// Auth middleware
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'unauthorized',
+      error_description: 'Missing authorization header'
+    });
+  }
+
+  const token = authHeader.substring(7);
+  
+  jwt.verify(token, getKey, {
+    audience: process.env.AUTH0_AUDIENCE || 'https://your-api-audience',
+    issuer: `https://${process.env.AUTH0_DOMAIN}/`,
+    algorithms: ['RS256']
+  }, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({
+        error: 'invalid_token',
+        error_description: 'Token verification failed'
+      });
+    }
+    
+    req.user = decoded;
+    next();
+  });
+}
 
 app.get('/', (req, res) => {
   res.json({ 
@@ -56,8 +103,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// MCP server info
-app.get('/mcp', (req, res) => {
+// MCP server info (protected)
+app.get('/mcp', authMiddleware, (req, res) => {
   res.json({
     protocol_version: "2024-11-05",
     capabilities: {
@@ -66,12 +113,16 @@ app.get('/mcp', (req, res) => {
     server_info: {
       name: 'Simple MCP Server',
       version: '1.0.0'
+    },
+    user: {
+      sub: req.user.sub,
+      email: req.user.email
     }
   });
 });
 
-// List available tools
-app.post('/mcp/tools/list', (req, res) => {
+// List available tools (protected)
+app.post('/mcp/tools/list', authMiddleware, (req, res) => {
   res.json({
     tools: [
       {
@@ -87,15 +138,15 @@ app.post('/mcp/tools/list', (req, res) => {
   });
 });
 
-// Call a tool
-app.post('/mcp/tools/call', (req, res) => {
+// Call a tool (protected)
+app.post('/mcp/tools/call', authMiddleware, (req, res) => {
   const { name } = req.body;
   
   if (name === 'ping') {
     res.json({
       content: [{
         type: "text",
-        text: "pong"
+        text: `pong from ${req.user.email || req.user.sub}`
       }]
     });
   } else {
