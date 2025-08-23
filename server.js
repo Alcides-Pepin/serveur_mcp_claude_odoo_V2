@@ -80,26 +80,34 @@ app.post('/', (req, res) => {
   const { method, id } = req.body;
   
   if (method === 'initialize') {
-    // Réponse JSON-RPC pour initialize - MATCHER la version de Claude
+    // Réponse JSON-RPC pour initialize - SELON LA RECHERCHE, le problème est connu
     console.log('🔧 Claude demande version:', req.body.params.protocolVersion);
+    
+    // Essayer de forcer Claude à découvrir les outils avec capabilities plus détaillées
     res.json({
       jsonrpc: "2.0",
       id: id,
       result: {
-        protocolVersion: "2025-06-18", // MÊME VERSION QUE CLAUDE
+        protocolVersion: "2025-06-18",
         capabilities: {
           tools: {
-            listChanged: true
-          }
+            listChanged: true,
+            subscribe: true
+          },
+          resources: {},
+          prompts: {}
         },
         serverInfo: {
-          name: 'Simple MCP Server',
+          name: 'Simple MCP Server with Auth',
           version: '1.0.0'
-        }
+        },
+        // Essayer d'envoyer les outils directement dans initialize (certains serveurs le font)
+        instructions: "This MCP server provides ping and echo tools for testing."
       }
     });
   } else if (method === 'notifications/initialized') {
-    // Notification sans réponse
+    // CRITICAL: Après initialized, forcer l'envoi des outils 
+    console.log('🎯 Notification initialized - forçons la découverte des outils');
     res.status(200).end();
   } else if (method === 'tools/list') {
     // Liste des outils disponibles
