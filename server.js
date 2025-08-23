@@ -116,8 +116,22 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// MCP server info (protected)
-app.get('/mcp', authMiddleware, (req, res) => {
+// MCP server info (non-protégé pour validation Claude)
+app.get('/mcp', (req, res) => {
+  res.json({
+    protocol_version: "2024-11-05",
+    capabilities: {
+      tools: {}
+    },
+    server_info: {
+      name: 'Simple MCP Server',
+      version: '1.0.0'
+    }
+  });
+});
+
+// MCP server info with user (protected)
+app.get('/mcp/user', authMiddleware, (req, res) => {
   res.json({
     protocol_version: "2024-11-05",
     capabilities: {
