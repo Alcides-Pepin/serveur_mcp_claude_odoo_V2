@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-client';
+import jwksClient from 'jwks-rsa';
 
 // JWKS client for Auth0 public key verification
 const client = jwksClient({
