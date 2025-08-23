@@ -21,11 +21,15 @@ function getKey(header, callback) {
   });
 }
 
-// Auth middleware
+// Auth middleware avec logs détaillés
 function authMiddleware(req, res, next) {
+  console.log('🔐 Auth check for:', req.method, req.url);
+  console.log('🔑 Headers:', req.headers.authorization ? 'Bearer token present' : 'No auth header');
+  
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('❌ No valid auth header');
     return res.status(401).json({
       error: 'unauthorized',
       error_description: 'Missing authorization header'
@@ -33,6 +37,7 @@ function authMiddleware(req, res, next) {
   }
 
   const token = authHeader.substring(7);
+  console.log('🎫 Token received, length:', token.length);
   
   jwt.verify(token, getKey, {
     audience: process.env.AUTH0_AUDIENCE || 'https://your-api-audience',
@@ -40,12 +45,14 @@ function authMiddleware(req, res, next) {
     algorithms: ['RS256']
   }, (err, decoded) => {
     if (err) {
+      console.log('❌ JWT verification failed:', err.message);
       return res.status(401).json({
         error: 'invalid_token',
         error_description: 'Token verification failed'
       });
     }
     
+    console.log('✅ JWT verified for user:', decoded.sub);
     req.user = decoded;
     next();
   });
@@ -136,6 +143,9 @@ app.get('/health', (req, res) => {
 
 // MCP server info (non-protégé pour validation Claude)
 app.get('/mcp', (req, res) => {
+  console.log('📋 MCP info requested by:', req.headers['user-agent'] || 'Unknown');
+  console.log('🔑 Has auth header:', !!req.headers.authorization);
+  
   res.json({
     protocol_version: "2024-11-05",
     capabilities: {
