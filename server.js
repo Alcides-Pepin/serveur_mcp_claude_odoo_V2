@@ -72,22 +72,40 @@ app.get('/', (req, res) => {
   });
 });
 
-// Claude fait un POST sur / - ajoutons le support
+// Claude fait un POST sur / - support JSON-RPC
 app.post('/', (req, res) => {
   console.log('🎯 Claude POST / detected!', req.body);
   console.log('🔑 Headers:', req.headers.authorization ? 'Bearer token present' : 'No auth header');
   
-  // Retourner les infos MCP sur POST /
-  res.json({
-    protocol_version: "2024-11-05",
-    capabilities: {
-      tools: {}
-    },
-    server_info: {
-      name: 'Simple MCP Server',
-      version: '1.0.0'
-    }
-  });
+  const { method, id } = req.body;
+  
+  if (method === 'initialize') {
+    // Réponse JSON-RPC pour initialize
+    res.json({
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: {
+          tools: {}
+        },
+        serverInfo: {
+          name: 'Simple MCP Server',
+          version: '1.0.0'
+        }
+      }
+    });
+  } else {
+    // Méthode non supportée
+    res.json({
+      jsonrpc: "2.0", 
+      id: id,
+      error: {
+        code: -32601,
+        message: "Method not found"
+      }
+    });
+  }
 });
 
 // OAuth Authorization Server Discovery - Retourner les infos Auth0
