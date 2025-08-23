@@ -72,6 +72,24 @@ app.get('/', (req, res) => {
   });
 });
 
+// Claude fait un POST sur / - ajoutons le support
+app.post('/', (req, res) => {
+  console.log('🎯 Claude POST / detected!', req.body);
+  console.log('🔑 Headers:', req.headers.authorization ? 'Bearer token present' : 'No auth header');
+  
+  // Retourner les infos MCP sur POST /
+  res.json({
+    protocol_version: "2024-11-05",
+    capabilities: {
+      tools: {}
+    },
+    server_info: {
+      name: 'Simple MCP Server',
+      version: '1.0.0'
+    }
+  });
+});
+
 // OAuth Authorization Server Discovery - Retourner les infos Auth0
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
   res.json({
