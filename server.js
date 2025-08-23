@@ -65,10 +65,21 @@ app.get('/', (req, res) => {
   });
 });
 
-// OAuth Authorization Server Discovery - Redirect vers Auth0
+// OAuth Authorization Server Discovery - Retourner les infos Auth0
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
-  // Selon MCP 2025: rediriger vers l'Authorization Server externe (Auth0)
-  res.redirect(`https://${process.env.AUTH0_DOMAIN}/.well-known/oauth-authorization-server`);
+  res.json({
+    issuer: `https://${process.env.AUTH0_DOMAIN}`,
+    authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/authorize`,
+    token_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+    device_authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/device/code`,
+    userinfo_endpoint: `https://${process.env.AUTH0_DOMAIN}/userinfo`,
+    jwks_uri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`,
+    scopes_supported: ["openid", "profile", "email"],
+    response_types_supported: ["code"],
+    response_modes_supported: ["query"],
+    grant_types_supported: ["authorization_code"],
+    code_challenge_methods_supported: ["S256"]
+  });
 });
 
 // OAuth Protected Resource Discovery
@@ -96,8 +107,18 @@ app.get('/.well-known/openid_configuration', (req, res) => {
   res.redirect('/.well-known/oauth-authorization-server');
 });
 
-// En tant que Resource Server, on n'a plus besoin de DCR
-// Claude utilisera l'Auth Server (Auth0) directement
+// Ajouter un endpoint /authorize qui redirige vers Auth0 au cas où Claude l'appelle
+app.get('/authorize', (req, res) => {
+  console.log('🔥 Claude essaie /authorize, redirection vers Auth0');
+  const authUrl = `https://${process.env.AUTH0_DOMAIN}/authorize?${new URLSearchParams(req.query)}`;
+  res.redirect(authUrl);
+});
+
+app.get('/oauth/authorize', (req, res) => {
+  console.log('🔥 Claude essaie /oauth/authorize, redirection vers Auth0');
+  const authUrl = `https://${process.env.AUTH0_DOMAIN}/authorize?${new URLSearchParams(req.query)}`;
+  res.redirect(authUrl);
+});
 
 // Endpoint de debug
 app.get('/debug', (req, res) => {
