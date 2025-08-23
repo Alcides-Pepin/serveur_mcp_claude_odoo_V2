@@ -65,27 +65,10 @@ app.get('/', (req, res) => {
   });
 });
 
-// OAuth Authorization Server Discovery (requis par Claude)
+// OAuth Authorization Server Discovery - Redirect vers Auth0
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  
-  res.json({
-    issuer: `https://${process.env.AUTH0_DOMAIN}`,
-    authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/authorize`,
-    token_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
-    device_authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/device/code`,
-    userinfo_endpoint: `https://${process.env.AUTH0_DOMAIN}/userinfo`,
-    jwks_uri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`,
-    registration_endpoint: `${baseUrl}/oauth/register`,
-    scopes_supported: ["openid", "profile", "email"],
-    response_types_supported: ["code"],
-    response_modes_supported: ["query"],
-    grant_types_supported: [
-      "authorization_code",
-      "urn:ietf:params:oauth:grant-type:device_code"
-    ],
-    code_challenge_methods_supported: ["S256"]
-  });
+  // Selon MCP 2025: rediriger vers l'Authorization Server externe (Auth0)
+  res.redirect(`https://${process.env.AUTH0_DOMAIN}/.well-known/oauth-authorization-server`);
 });
 
 // OAuth Protected Resource Discovery
@@ -113,41 +96,8 @@ app.get('/.well-known/openid_configuration', (req, res) => {
   res.redirect('/.well-known/oauth-authorization-server');
 });
 
-// Dynamic Client Registration (DCR) - requis par Claude
-app.post('/oauth/register', (req, res) => {
-  console.log('🔥 DCR Request:', req.body);
-  console.log('🔧 AUTH0_CLIENT_ID:', process.env.AUTH0_CLIENT_ID);
-  
-  const {
-    client_name,
-    redirect_uris,
-    grant_types = ["authorization_code"],
-    response_types = ["code"],
-    scope = "openid profile email"
-  } = req.body;
-
-  if (!client_name || !redirect_uris || !Array.isArray(redirect_uris)) {
-    console.log('❌ Invalid DCR request');
-    return res.status(400).json({
-      error: "invalid_client_metadata",
-      error_description: "client_name and redirect_uris are required"
-    });
-  }
-
-  const response = {
-    client_id: process.env.AUTH0_CLIENT_ID,
-    client_name,
-    redirect_uris,
-    grant_types,
-    response_types,
-    scope,
-    client_id_issued_at: Math.floor(Date.now() / 1000),
-    token_endpoint_auth_method: "none" // Public client
-  };
-  
-  console.log('✅ DCR Response:', response);
-  res.json(response);
-});
+// En tant que Resource Server, on n'a plus besoin de DCR
+// Claude utilisera l'Auth Server (Auth0) directement
 
 // Endpoint de debug
 app.get('/debug', (req, res) => {
