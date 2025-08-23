@@ -80,12 +80,13 @@ app.post('/', (req, res) => {
   const { method, id } = req.body;
   
   if (method === 'initialize') {
-    // Réponse JSON-RPC pour initialize - SPEC 2025-03-26
+    // Réponse JSON-RPC pour initialize - MATCHER la version de Claude
+    console.log('🔧 Claude demande version:', req.body.params.protocolVersion);
     res.json({
       jsonrpc: "2.0",
       id: id,
       result: {
-        protocolVersion: "2025-03-26",
+        protocolVersion: "2025-06-18", // MÊME VERSION QUE CLAUDE
         capabilities: {
           tools: {
             listChanged: true
