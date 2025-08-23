@@ -99,6 +99,19 @@ app.get('/.well-known/oauth-protected-resource', (req, res) => {
   });
 });
 
+// Alternative OAuth endpoints que Claude pourrait chercher
+app.get('/oauth/config', (req, res) => {
+  res.json({
+    authorization_endpoint: `https://${process.env.AUTH0_DOMAIN}/authorize`,
+    token_endpoint: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+    client_id: process.env.AUTH0_CLIENT_ID
+  });
+});
+
+app.get('/.well-known/openid_configuration', (req, res) => {
+  res.redirect('/.well-known/oauth-authorization-server');
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
