@@ -96,9 +96,10 @@ app.get('/sse', (req, res) => {
   });
 });
 
-// SSE endpoint pour Claude Web - POST (messages)
+// SSE endpoint pour Claude Web - POST (messages) - SANS AUTH POUR TEST
 app.post('/sse', (req, res) => {
   console.log('📨 Claude POST /sse detected!', req.body);
+  console.log('🔐 Auth header:', req.headers.authorization ? 'Present' : 'Missing');
   
   const { method, id } = req.body;
   
@@ -124,6 +125,14 @@ app.post('/sse', (req, res) => {
     });
   } else if (method === 'notifications/initialized') {
     console.log('🎯 SSE Notification initialized');
+    
+    // FORCER la découverte des outils après initialized
+    setTimeout(() => {
+      console.log('🚨 FORCE: Sending tools/list_changed notification');
+      // Note: dans un vrai SSE, on enverrait via le stream
+      // Ici on va juste logger pour debug
+    }, 100);
+    
     res.status(200).end();
   } else if (method === 'tools/list') {
     console.log('🛠️ SSE Tools list - FINALLY!');
