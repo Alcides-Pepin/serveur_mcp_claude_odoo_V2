@@ -292,18 +292,15 @@ app.post('/messages', (req, res) => {
   }
 });
 
-// Claude fait un POST sur / - support JSON-RPC
+// Claude fait un POST sur / - REDIRECTION vers logique SSE
 app.post('/', (req, res) => {
-  console.log('🎯 Claude POST / detected!', req.body);
+  console.log('🎯 Claude POST / detected - REDIRECTING TO SSE LOGIC!', req.body);
   console.log('🔑 Headers:', req.headers.authorization ? 'Bearer token present' : 'No auth header');
   
   const { method, id } = req.body;
   
   if (method === 'initialize') {
-    // Réponse JSON-RPC pour initialize - SPECS MCP 2025-03-26 OFFICIELLES
-    console.log('🔧 Claude demande version:', req.body.params.protocolVersion);
-    
-    // Réponse EXACTE selon specs MCP 2025-03-26
+    console.log('🔧 Main endpoint Initialize');
     res.json({
       jsonrpc: "2.0",
       id: id,
@@ -311,16 +308,9 @@ app.post('/', (req, res) => {
         protocolVersion: "2025-06-18",
         capabilities: {
           logging: {},
-          prompts: {
-            listChanged: true
-          },
-          resources: {
-            subscribe: true,
-            listChanged: true
-          },
-          tools: {
-            listChanged: true
-          }
+          prompts: { listChanged: true },
+          resources: { subscribe: true, listChanged: true },
+          tools: { listChanged: true }
         },
         serverInfo: {
           name: 'Odoo MCP Server',
@@ -330,12 +320,19 @@ app.post('/', (req, res) => {
       }
     });
   } else if (method === 'notifications/initialized') {
-    // Notification initialized - conforme aux specs
-    console.log('🎯 Notification initialized reçue - serveur prêt');
+    console.log('🎯 Main endpoint Notification initialized');
+    
+    // FORCER Claude à appeler tools/list
+    console.log('🚨 CRITIQUE: Claude doit maintenant appeler tools/list !');
+    console.log('🚨 Si pas d\'appel tools/list dans les prochaines secondes = problème config Claude Web');
+    
+    setTimeout(() => {
+      console.log('⏰ 5s écoulées - Claude n\'a pas appelé tools/list = problème côté Claude Web');
+    }, 5000);
+    
     res.status(200).end();
   } else if (method === 'tools/list') {
-    // Liste des outils disponibles - SPECS MCP 2025-03-26
-    console.log('🔧 Claude demande tools/list !');
+    console.log('🛠️ Main endpoint Tools list - FINALLY!');
     res.json({
       jsonrpc: "2.0",
       id: id,
@@ -345,24 +342,15 @@ app.post('/', (req, res) => {
             name: "ping",
             title: "Ping Tool",
             description: "Simple ping tool that responds with pong",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              required: []
-            }
+            inputSchema: { type: "object", properties: {}, required: [] }
           },
           {
             name: "echo",
-            title: "Echo Tool",
+            title: "Echo Tool", 
             description: "Echo back your message",
             inputSchema: {
-              type: "object", 
-              properties: {
-                message: {
-                  type: "string",
-                  description: "Message to echo back"
-                }
-              },
+              type: "object",
+              properties: { message: { type: "string", description: "Message to echo back" } },
               required: ["message"]
             }
           },
@@ -373,14 +361,8 @@ app.post('/', (req, res) => {
             inputSchema: {
               type: "object",
               properties: {
-                query: {
-                  type: "string",
-                  description: "Query to execute"
-                },
-                model: {
-                  type: "string",
-                  description: "Odoo model name (optional)"
-                }
+                query: { type: "string", description: "Query to execute" },
+                model: { type: "string", description: "Odoo model name (optional)" }
               },
               required: ["query"]
             }
@@ -389,74 +371,38 @@ app.post('/', (req, res) => {
       }
     });
   } else if (method === 'tools/call') {
-    // Exécution d'un outil - SPECS MCP 2025-03-26
+    console.log('🎯 Main endpoint Tool call:', req.body.params?.name);
     const { name, arguments: args } = req.body.params;
-    console.log(`🛠️ Tool call: ${name}`, args);
     
     if (name === 'ping') {
       res.json({
         jsonrpc: "2.0",
         id: id,
         result: {
-          content: [{
-            type: "text", 
-            text: "🏓 pong! Your Odoo MCP server is working perfectly!"
-          }]
+          content: [{ type: "text", text: "🏓 pong! Your Odoo MCP server is working on main endpoint!" }]
         }
       });
     } else if (name === 'echo') {
-      if (!args?.message) {
-        return res.json({
-          jsonrpc: "2.0",
-          id: id,
-          error: {
-            code: -32602,
-            message: "Invalid params: message is required"
-          }
-        });
-      }
-      
       res.json({
         jsonrpc: "2.0",
         id: id,
         result: {
-          content: [{
-            type: "text",
-            text: `Echo: ${args.message}`
-          }]
+          content: [{ type: "text", text: `Echo from main endpoint: ${args?.message || 'No message'}` }]
         }
       });
     } else if (name === 'odoo_query') {
-      if (!args?.query) {
-        return res.json({
-          jsonrpc: "2.0",
-          id: id,
-          error: {
-            code: -32602,
-            message: "Invalid params: query is required"
-          }
-        });
-      }
-      
-      // Pour l'instant, simulation - plus tard on ajoutera la vraie logique Odoo
       res.json({
         jsonrpc: "2.0",
         id: id,
         result: {
-          content: [{
-            type: "text",
-            text: `Odoo Query executed: "${args.query}" on model "${args.model || 'default'}"\n\nResult: [Simulated response - to be implemented with real Odoo connection]`
-          }]
+          content: [{ type: "text", text: `Odoo Query from main endpoint: "${args?.query}" on model "${args?.model || 'default'}"` }]
         }
       });
     } else {
       res.json({
         jsonrpc: "2.0",
         id: id,
-        error: {
-          code: -32601,
-          message: `Method not found: ${name}`
-        }
+        error: { code: -32601, message: `Method not found: ${name}` }
       });
     }
   } else {
