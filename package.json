@@ -1,28 +1,28 @@
 {
   "name": "odoo-mcp-server",
   "version": "1.0.0",
-  "type": "module",
-  "main": "build/index.js",
+  "main": "server.js",
   "bin": {
     "odoo-mcp-server": "./build/index.js"
   },
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
-    "start": "node build/index.js",
+    "start": "node server.js",
     "dev": "tsc --watch",
     "prepare": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",
     "dotenv": "^16.4.5",
-    "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.23.5",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "jwks-rsa": "^3.1.0"
+    "jwks-rsa": "^3.1.0",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
   },
   "devDependencies": {
-    "@types/node": "^20.11.24",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.11.24",
     "typescript": "^5.3.3"
   },
   "files": [

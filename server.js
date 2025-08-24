@@ -80,37 +80,41 @@ app.post('/', (req, res) => {
   const { method, id } = req.body;
   
   if (method === 'initialize') {
-    // Réponse JSON-RPC pour initialize - SELON LA RECHERCHE, le problème est connu
+    // Réponse JSON-RPC pour initialize - SPECS MCP 2025-03-26 OFFICIELLES
     console.log('🔧 Claude demande version:', req.body.params.protocolVersion);
     
-    // Essayer de forcer Claude à découvrir les outils avec capabilities plus détaillées
+    // Réponse EXACTE selon specs MCP 2025-03-26
     res.json({
       jsonrpc: "2.0",
       id: id,
       result: {
-        protocolVersion: "2025-06-18",
+        protocolVersion: "2025-03-26",
         capabilities: {
-          tools: {
-            listChanged: true,
-            subscribe: true
+          logging: {},
+          prompts: {
+            listChanged: true
           },
-          resources: {},
-          prompts: {}
+          resources: {
+            subscribe: true,
+            listChanged: true
+          },
+          tools: {
+            listChanged: true
+          }
         },
         serverInfo: {
-          name: 'Simple MCP Server with Auth',
+          name: 'Odoo MCP Server',
           version: '1.0.0'
         },
-        // Essayer d'envoyer les outils directement dans initialize (certains serveurs le font)
-        instructions: "This MCP server provides ping and echo tools for testing."
+        instructions: "This MCP server provides tools for Odoo integration."
       }
     });
   } else if (method === 'notifications/initialized') {
-    // CRITICAL: Après initialized, forcer l'envoi des outils 
-    console.log('🎯 Notification initialized - forçons la découverte des outils');
+    // Notification initialized - conforme aux specs
+    console.log('🎯 Notification initialized reçue - serveur prêt');
     res.status(200).end();
   } else if (method === 'tools/list') {
-    // Liste des outils disponibles
+    // Liste des outils disponibles - SPECS MCP 2025-03-26
     console.log('🔧 Claude demande tools/list !');
     res.json({
       jsonrpc: "2.0",
@@ -119,6 +123,7 @@ app.post('/', (req, res) => {
         tools: [
           {
             name: "ping",
+            title: "Ping Tool",
             description: "Simple ping tool that responds with pong",
             inputSchema: {
               type: "object",
@@ -128,6 +133,7 @@ app.post('/', (req, res) => {
           },
           {
             name: "echo",
+            title: "Echo Tool",
             description: "Echo back your message",
             inputSchema: {
               type: "object", 
@@ -139,13 +145,33 @@ app.post('/', (req, res) => {
               },
               required: ["message"]
             }
+          },
+          {
+            name: "odoo_query",
+            title: "Odoo Query Tool",
+            description: "Execute queries on Odoo system",
+            inputSchema: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "Query to execute"
+                },
+                model: {
+                  type: "string",
+                  description: "Odoo model name (optional)"
+                }
+              },
+              required: ["query"]
+            }
           }
         ]
       }
     });
   } else if (method === 'tools/call') {
-    // Exécution d'un outil
+    // Exécution d'un outil - SPECS MCP 2025-03-26
     const { name, arguments: args } = req.body.params;
+    console.log(`🛠️ Tool call: ${name}`, args);
     
     if (name === 'ping') {
       res.json({
@@ -154,11 +180,22 @@ app.post('/', (req, res) => {
         result: {
           content: [{
             type: "text", 
-            text: "🏓 pong! Your MCP server is working perfectly!"
+            text: "🏓 pong! Your Odoo MCP server is working perfectly!"
           }]
         }
       });
-    } else if (name === 'echo' && args?.message) {
+    } else if (name === 'echo') {
+      if (!args?.message) {
+        return res.json({
+          jsonrpc: "2.0",
+          id: id,
+          error: {
+            code: -32602,
+            message: "Invalid params: message is required"
+          }
+        });
+      }
+      
       res.json({
         jsonrpc: "2.0",
         id: id,
@@ -169,13 +206,36 @@ app.post('/', (req, res) => {
           }]
         }
       });
+    } else if (name === 'odoo_query') {
+      if (!args?.query) {
+        return res.json({
+          jsonrpc: "2.0",
+          id: id,
+          error: {
+            code: -32602,
+            message: "Invalid params: query is required"
+          }
+        });
+      }
+      
+      // Pour l'instant, simulation - plus tard on ajoutera la vraie logique Odoo
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{
+            type: "text",
+            text: `Odoo Query executed: "${args.query}" on model "${args.model || 'default'}"\n\nResult: [Simulated response - to be implemented with real Odoo connection]`
+          }]
+        }
+      });
     } else {
       res.json({
         jsonrpc: "2.0",
         id: id,
         error: {
-          code: -32602,
-          message: "Invalid params"
+          code: -32601,
+          message: `Method not found: ${name}`
         }
       });
     }
