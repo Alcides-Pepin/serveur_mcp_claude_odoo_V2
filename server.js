@@ -88,7 +88,7 @@ app.post('/', (req, res) => {
       jsonrpc: "2.0",
       id: id,
       result: {
-        protocolVersion: "2025-03-26",
+        protocolVersion: "2025-06-18",
         capabilities: {
           logging: {},
           prompts: {
