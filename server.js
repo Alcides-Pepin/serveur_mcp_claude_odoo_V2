@@ -72,9 +72,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// SSE endpoint pour Claude Web
+// SSE endpoint pour Claude Web - GET (connexion)
 app.get('/sse', (req, res) => {
-  console.log('🌊 Claude SSE connection established');
+  console.log('🌊 Claude SSE connection established (GET)');
   
   // Headers SSE obligatoires
   res.writeHead(200, {
@@ -94,6 +94,118 @@ app.get('/sse', (req, res) => {
     console.log('🌊 SSE connection closed');
     clearInterval(keepAlive);
   });
+});
+
+// SSE endpoint pour Claude Web - POST (messages)
+app.post('/sse', (req, res) => {
+  console.log('📨 Claude POST /sse detected!', req.body);
+  
+  const { method, id } = req.body;
+  
+  if (method === 'initialize') {
+    console.log('🔧 SSE Initialize via POST');
+    res.json({
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: {
+          logging: {},
+          prompts: { listChanged: true },
+          resources: { subscribe: true, listChanged: true },
+          tools: { listChanged: true }
+        },
+        serverInfo: {
+          name: 'Odoo MCP Server',
+          version: '1.0.0'
+        },
+        instructions: "This MCP server provides tools for Odoo integration."
+      }
+    });
+  } else if (method === 'notifications/initialized') {
+    console.log('🎯 SSE Notification initialized');
+    res.status(200).end();
+  } else if (method === 'tools/list') {
+    console.log('🛠️ SSE Tools list - FINALLY!');
+    res.json({
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        tools: [
+          {
+            name: "ping",
+            title: "Ping Tool",
+            description: "Simple ping tool that responds with pong",
+            inputSchema: { type: "object", properties: {}, required: [] }
+          },
+          {
+            name: "echo",
+            title: "Echo Tool", 
+            description: "Echo back your message",
+            inputSchema: {
+              type: "object",
+              properties: { message: { type: "string", description: "Message to echo back" } },
+              required: ["message"]
+            }
+          },
+          {
+            name: "odoo_query",
+            title: "Odoo Query Tool",
+            description: "Execute queries on Odoo system",
+            inputSchema: {
+              type: "object",
+              properties: {
+                query: { type: "string", description: "Query to execute" },
+                model: { type: "string", description: "Odoo model name (optional)" }
+              },
+              required: ["query"]
+            }
+          }
+        ]
+      }
+    });
+  } else if (method === 'tools/call') {
+    console.log('🎯 SSE Tool call:', req.body.params?.name);
+    const { name, arguments: args } = req.body.params;
+    
+    if (name === 'ping') {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{ type: "text", text: "🏓 pong! Your Odoo MCP server is working via SSE!" }]
+        }
+      });
+    } else if (name === 'echo') {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{ type: "text", text: `Echo via SSE: ${args?.message || 'No message'}` }]
+        }
+      });
+    } else if (name === 'odoo_query') {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        result: {
+          content: [{ type: "text", text: `Odoo Query via SSE: "${args?.query}" on model "${args?.model || 'default'}"` }]
+        }
+      });
+    } else {
+      res.json({
+        jsonrpc: "2.0",
+        id: id,
+        error: { code: -32601, message: `Method not found: ${name}` }
+      });
+    }
+  } else {
+    res.json({
+      jsonrpc: "2.0",
+      id: id,
+      error: { code: -32601, message: `Method not found: ${method}` }
+    });
+  }
 });
 
 // Messages endpoint pour SSE
