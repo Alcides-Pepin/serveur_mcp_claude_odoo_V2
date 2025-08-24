@@ -126,12 +126,14 @@ app.post('/sse', (req, res) => {
   } else if (method === 'notifications/initialized') {
     console.log('🎯 SSE Notification initialized');
     
-    // FORCER la découverte des outils après initialized
+    // FORCER Claude à appeler tools/list
+    console.log('🚨 CRITIQUE: Claude doit maintenant appeler tools/list !');
+    console.log('🚨 Si pas d\'appel tools/list dans les prochaines secondes = problème config Claude Web');
+    
+    // Optionnel: on pourrait auto-envoyer les tools
     setTimeout(() => {
-      console.log('🚨 FORCE: Sending tools/list_changed notification');
-      // Note: dans un vrai SSE, on enverrait via le stream
-      // Ici on va juste logger pour debug
-    }, 100);
+      console.log('⏰ 5s écoulées - Claude n\'a pas appelé tools/list = problème côté Claude Web');
+    }, 5000);
     
     res.status(200).end();
   } else if (method === 'tools/list') {
