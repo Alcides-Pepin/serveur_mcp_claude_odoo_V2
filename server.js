@@ -72,6 +72,103 @@ app.get('/', (req, res) => {
   });
 });
 
+// SSE endpoint pour Claude Web
+app.get('/sse', (req, res) => {
+  console.log('🌊 Claude SSE connection established');
+  
+  // Headers SSE obligatoires
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Garder la connexion ouverte
+  const keepAlive = setInterval(() => {
+    res.write('data: {"type":"ping"}\n\n');
+  }, 30000);
+
+  req.on('close', () => {
+    console.log('🌊 SSE connection closed');
+    clearInterval(keepAlive);
+  });
+});
+
+// Messages endpoint pour SSE
+app.post('/messages', (req, res) => {
+  console.log('📨 SSE Message received:', req.body);
+  
+  const { method, id } = req.body;
+  
+  // Même logique que le JSON-RPC mais format SSE
+  if (method === 'initialize') {
+    console.log('🔧 SSE Initialize');
+    const response = {
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: {
+          logging: {},
+          prompts: { listChanged: true },
+          resources: { subscribe: true, listChanged: true },
+          tools: { listChanged: true }
+        },
+        serverInfo: {
+          name: 'Odoo MCP Server',
+          version: '1.0.0'
+        },
+        instructions: "This MCP server provides tools for Odoo integration."
+      }
+    };
+    res.json(response);
+  } else if (method === 'tools/list') {
+    console.log('🛠️ SSE Tools list');
+    const response = {
+      jsonrpc: "2.0",
+      id: id,
+      result: {
+        tools: [
+          {
+            name: "ping",
+            title: "Ping Tool",
+            description: "Simple ping tool that responds with pong",
+            inputSchema: { type: "object", properties: {}, required: [] }
+          },
+          {
+            name: "echo",
+            title: "Echo Tool",
+            description: "Echo back your message",
+            inputSchema: {
+              type: "object",
+              properties: { message: { type: "string", description: "Message to echo back" } },
+              required: ["message"]
+            }
+          },
+          {
+            name: "odoo_query",
+            title: "Odoo Query Tool",
+            description: "Execute queries on Odoo system",
+            inputSchema: {
+              type: "object",
+              properties: {
+                query: { type: "string", description: "Query to execute" },
+                model: { type: "string", description: "Odoo model name (optional)" }
+              },
+              required: ["query"]
+            }
+          }
+        ]
+      }
+    };
+    res.json(response);
+  } else {
+    res.status(404).json({ error: 'Method not found' });
+  }
+});
+
 // Claude fait un POST sur / - support JSON-RPC
 app.post('/', (req, res) => {
   console.log('🎯 Claude POST / detected!', req.body);
